@@ -458,7 +458,7 @@ var SubscriptionClient = (function () {
                 }
             });
         }); };
-        if (newClient) {
+        if (!newClient) {
             initialize();
         }
         else {
