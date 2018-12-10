@@ -567,7 +567,7 @@ export class SubscriptionClient {
       }
     };
 
-    if (newClient) {
+    if (!newClient) {
       initialize();
     } else {
       this.client.onopen = initialize;
