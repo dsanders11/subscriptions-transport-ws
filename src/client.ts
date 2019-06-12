@@ -66,6 +66,7 @@ export interface ClientOptions {
   connectionCallback?: (error: Error[], result?: any) => void;
   lazy?: boolean;
   inactivityTimeout?: number;
+  getClient?: Function;
 }
 
 export class SubscriptionClient {
@@ -94,6 +95,7 @@ export class SubscriptionClient {
   private maxConnectTimeoutId: any;
   private middlewares: Middleware[];
   private maxConnectTimeGenerator: any;
+  private getClient: Function;
 
   constructor(
     url: string,
@@ -135,6 +137,11 @@ export class SubscriptionClient {
     this.client = null;
     this.maxConnectTimeGenerator = this.createMaxConnectTimeGenerator();
     this.connectionParams = this.getConnectionParams(connectionParams);
+
+    const getClient = () => {
+      return [new this.wsImpl(this.url, this.wsProtocols), false];
+    };
+    this.getClient = options.getClient || getClient;
 
     if (!this.lazy) {
       this.connect();
@@ -542,11 +549,12 @@ export class SubscriptionClient {
   }
 
   private connect() {
-    this.client = new this.wsImpl(this.url, this.wsProtocols);
+    const [ client, newClient ] = this.getClient();
+    this.client = client
 
     this.checkMaxConnectTimeout();
 
-    this.client.onopen = async () => {
+    const initialize = async () => {
       if (this.status === this.wsImpl.OPEN) {
         this.clearMaxConnectTimeout();
         this.closedByUser = false;
@@ -564,6 +572,12 @@ export class SubscriptionClient {
         }
       }
     };
+
+    if (!newClient) {
+      initialize();
+    } else {
+      this.client.onopen = initialize;
+    }
 
     this.client.onclose = () => {
       if (!this.closedByUser) {
